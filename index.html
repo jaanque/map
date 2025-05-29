@@ -4,103 +4,395 @@
   <meta charset="UTF-8" />
   <title>Mapa Sicilia - Erasmus</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <link rel="shortcut icon" href="favicon.ico" type="image/x-icon">
   <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css" />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
   <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <style>
-    html, body { margin: 0; height: 100%; }
-    #map { width: 100%; height: 100vh; }
+    * {
+      box-sizing: border-box;
+    }
 
+    html, body {
+      margin: 0;
+      height: 100%;
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      background: #f8fafc;
+    }
 
+    #map {
+      width: 100%;
+      height: 100vh;
+    }
 
+    /* Formulario modernizado */
     #formulario {
       display: none;
       position: absolute;
-      background: white;
-      border: 1px solid #ddd;
-      padding: 16px;
-      border-radius: 14px;
-      width: 300px;
-      box-shadow: 0 12px 30px rgba(0,0,0,0.12);
+      background: rgba(255, 255, 255, 0.98);
+      backdrop-filter: blur(20px);
+      -webkit-backdrop-filter: blur(20px);
+      border: 1px solid rgba(255, 255, 255, 0.2);
+      padding: 24px;
+      border-radius: 20px;
+      width: 340px;
+      box-shadow: 
+        0 20px 60px rgba(0, 0, 0, 0.1),
+        0 8px 25px rgba(0, 0, 0, 0.08),
+        inset 0 1px 0 rgba(255, 255, 255, 0.6);
       z-index: 1000;
-      animation: abrirFormulario 0.4s ease-out;
+      animation: slideUpFade 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+      transform-origin: bottom center;
     }
 
-    @keyframes abrirFormulario {
-      0% { opacity: 0; transform: scale(0.7); }
-      100% { opacity: 1; transform: scale(1); }
+    @keyframes slideUpFade {
+      0% {
+        opacity: 0;
+        transform: translateY(20px) scale(0.95);
+      }
+      100% {
+        opacity: 1;
+        transform: translateY(0) scale(1);
+      }
     }
 
+    #formulario h3 {
+      margin: 0 0 20px 0;
+      font-size: 1.25rem;
+      font-weight: 600;
+      color: #1e293b;
+      letter-spacing: -0.025em;
+    }
+
+    #formulario input,
+    #formulario select,
+    #formulario textarea {
+      width: 100%;
+      padding: 12px 16px;
+      margin-bottom: 16px;
+      border: 2px solid #e2e8f0;
+      border-radius: 12px;
+      font-size: 0.95rem;
+      font-family: inherit;
+      background: rgba(255, 255, 255, 0.8);
+      transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+      outline: none;
+    }
+
+    #formulario input:focus,
+    #formulario select:focus,
+    #formulario textarea:focus {
+      border-color: #3b82f6;
+      background: rgba(255, 255, 255, 0.95);
+      box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+      transform: translateY(-1px);
+    }
+
+    #formulario input::placeholder,
+    #formulario textarea::placeholder {
+      color: #94a3b8;
+    }
+
+    #formulario button {
+      padding: 12px 20px;
+      margin: 6px 8px 6px 0;
+      border: none;
+      border-radius: 12px;
+      font-family: inherit;
+      font-size: 0.95rem;
+      font-weight: 500;
+      cursor: pointer;
+      transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+      position: relative;
+      overflow: hidden;
+    }
+
+    #formulario button:first-of-type {
+      background: linear-gradient(135deg, #3b82f6, #1d4ed8);
+      color: white;
+      box-shadow: 0 4px 15px rgba(59, 130, 246, 0.3);
+    }
+
+    #formulario button:first-of-type:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 8px 25px rgba(59, 130, 246, 0.4);
+    }
+
+    #formulario button:last-of-type {
+      background: rgba(148, 163, 184, 0.1);
+      color: #64748b;
+      border: 2px solid #e2e8f0;
+    }
+
+    #formulario button:last-of-type:hover {
+      background: rgba(148, 163, 184, 0.2);
+      border-color: #cbd5e1;
+      transform: translateY(-1px);
+    }
+
+    /* Botón centrar modernizado */
     #centrar-btn {
       position: absolute;
-      bottom: 20px;
-      right: 20px;
+      bottom: 30px;
+      right: 30px;
       z-index: 999;
-      background: white;
-      border: none;
-      border-radius: 50%;
-      width: 48px;
-      height: 48px;
-      box-shadow: 0 2px 10px rgba(0,0,0,0.15);
+      background: rgba(255, 255, 255, 0.95);
+      backdrop-filter: blur(20px);
+      -webkit-backdrop-filter: blur(20px);
+      border: 1px solid rgba(255, 255, 255, 0.2);
+      border-radius: 16px;
+      width: 56px;
+      height: 56px;
+      box-shadow: 
+        0 8px 32px rgba(0, 0, 0, 0.12),
+        0 2px 8px rgba(0, 0, 0, 0.08);
       display: flex;
       align-items: center;
       justify-content: center;
       cursor: pointer;
-      transition: transform 0.2s ease;
+      transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
     }
 
     #centrar-btn:hover {
-      transform: scale(1.1);
+      transform: translateY(-3px) scale(1.05);
+      box-shadow: 
+        0 12px 40px rgba(0, 0, 0, 0.15),
+        0 4px 12px rgba(0, 0, 0, 0.1);
+      background: rgba(255, 255, 255, 1);
     }
 
+    #centrar-btn:active {
+      transform: translateY(-1px) scale(1.02);
+    }
+
+    /* Panel de información modernizado */
     #zoom-info {
       position: absolute;
-      top: 10px;
-      left: 10px;
-      background: rgba(255, 255, 255, 0.9);
-      padding: 8px 12px;
-      border-radius: 6px;
-      font-size: 0.9em;
-      color: #666;
+      top: 30px;
+      left: 30px;
+      background: rgba(255, 255, 255, 0.95);
+      backdrop-filter: blur(20px);
+      -webkit-backdrop-filter: blur(20px);
+      padding: 16px 20px;
+      border-radius: 16px;
+      font-size: 0.9rem;
+      font-weight: 500;
+      color: #475569;
       z-index: 999;
-      border: 1px solid #ddd;
+      border: 1px solid rgba(255, 255, 255, 0.2);
+      box-shadow: 
+        0 8px 32px rgba(0, 0, 0, 0.12),
+        0 2px 8px rgba(0, 0, 0, 0.08);
+      min-width: 200px;
+      transition: all 0.3s ease;
     }
 
-    /* Estilos para popup personalizados */
-    .popup-content {
-      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-      line-height: 1.4;
-      color: #333;
-      max-width: 260px;
+    #zoom-info:hover {
+      transform: translateY(-2px);
+      box-shadow: 
+        0 12px 40px rgba(0, 0, 0, 0.15),
+        0 4px 12px rgba(0, 0, 0, 0.1);
     }
+
+    #zoom-level {
+      font-weight: 700;
+      color: #1e293b;
+      font-size: 1.1rem;
+    }
+
+    #markers-status {
+      display: block;
+      margin-top: 4px;
+      font-size: 0.85rem;
+      font-weight: 400;
+      transition: color 0.3s ease;
+    }
+
+    /* Estilos mejorados para popups */
+    .leaflet-popup-content-wrapper {
+      background: rgba(255, 255, 255, 0.98);
+      backdrop-filter: blur(20px);
+      -webkit-backdrop-filter: blur(20px);
+      border-radius: 16px;
+      box-shadow: 
+        0 20px 60px rgba(0, 0, 0, 0.15),
+        0 8px 25px rgba(0, 0, 0, 0.1);
+      border: 1px solid rgba(255, 255, 255, 0.2);
+      padding: 0;
+    }
+
+    .leaflet-popup-tip {
+      background: rgba(255, 255, 255, 0.98);
+      backdrop-filter: blur(20px);
+      -webkit-backdrop-filter: blur(20px);
+      border: 1px solid rgba(255, 255, 255, 0.2);
+    }
+
+    .popup-content {
+      font-family: 'Inter', sans-serif;
+      line-height: 1.5;
+      color: #334155;
+      max-width: 280px;
+      padding: 4px;
+    }
+
     .popup-title {
       font-weight: 700;
-      font-size: 1.2em;
-      margin-bottom: 4px;
-      color: #007bff;
+      font-size: 1.2rem;
+      margin-bottom: 8px;
+      color: #1e293b;
+      letter-spacing: -0.025em;
     }
+
     .popup-category {
-      font-weight: 600;
-      font-size: 0.95em;
-      color: #555;
-      margin-bottom: 6px;
+      display: inline-block;
+      font-weight: 500;
+      font-size: 0.8rem;
+      color: white;
+      background: linear-gradient(135deg, #3b82f6, #1d4ed8);
+      padding: 4px 12px;
+      border-radius: 20px;
+      margin-bottom: 12px;
       text-transform: capitalize;
+      letter-spacing: 0.025em;
     }
+
     .popup-field {
-      margin-bottom: 6px;
+      margin-bottom: 8px;
+      display: flex;
+      align-items: flex-start;
+      gap: 8px;
     }
+
     .popup-label {
       font-weight: 600;
-      color: #555;
+      color: #64748b;
+      font-size: 0.9rem;
+      min-width: 60px;
+      flex-shrink: 0;
     }
+
     .popup-text {
-      margin-left: 6px;
-      color: #444;
+      color: #475569;
+      font-size: 0.9rem;
+      flex: 1;
     }
+
     .popup-price {
       font-weight: 700;
-      color: #27ae60;
-      font-size: 1.1em;
+      color: #059669;
+      font-size: 1.1rem;
+      background: rgba(5, 150, 105, 0.1);
+      padding: 4px 8px;
+      border-radius: 8px;
+      display: inline-block;
+    }
+
+    /* Efectos para marcadores mejorados */
+    .modern-marker {
+      transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+
+    .modern-marker:hover {
+      transform: translateY(-3px) scale(1.1);
+      filter: brightness(1.1);
+    }
+
+    /* Punto de ubicación mejorado */
+    .blue-dot {
+      position: relative;
+    }
+
+    .blue-dot::after {
+      content: '';
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      width: 30px;
+      height: 30px;
+      background: rgba(59, 130, 246, 0.2);
+      border-radius: 50%;
+      animation: locationPulse 2s ease-in-out infinite;
+    }
+
+    @keyframes locationPulse {
+      0%, 100% {
+        transform: translate(-50%, -50%) scale(1);
+        opacity: 0.8;
+      }
+      50% {
+        transform: translate(-50%, -50%) scale(1.5);
+        opacity: 0.3;
+      }
+    }
+
+    /* Responsivo */
+    @media (max-width: 768px) {
+      #formulario {
+        width: calc(100vw - 40px);
+        max-width: 340px;
+        left: 20px !important;
+        right: 20px;
+        top: 50% !important;
+        transform: translateY(-50%);
+      }
+
+      #zoom-info {
+        top: 20px;
+        left: 20px;
+        right: 20px;
+        padding: 12px 16px;
+        font-size: 0.85rem;
+      }
+
+      #centrar-btn {
+        bottom: 20px;
+        right: 20px;
+        width: 50px;
+        height: 50px;
+      }
+    }
+
+    /* Animaciones adicionales */
+    @keyframes fadeInUp {
+      from {
+        opacity: 0;
+        transform: translateY(30px);
+      }
+      to {
+        opacity: 1;
+        transform: translateY(0);
+      }
+    }
+
+    .fade-in-up {
+      animation: fadeInUp 0.6s ease-out;
+    }
+
+    /* Loading state */
+    .loading {
+      position: relative;
+    }
+
+    .loading::after {
+      content: '';
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      width: 20px;
+      height: 20px;
+      margin: -10px 0 0 -10px;
+      border: 2px solid #e2e8f0;
+      border-top: 2px solid #3b82f6;
+      border-radius: 50%;
+      animation: spin 1s linear infinite;
+    }
+
+    @keyframes spin {
+      0% { transform: rotate(0deg); }
+      100% { transform: rotate(360deg); }
     }
   </style>
 </head>
@@ -108,62 +400,64 @@
 
 <div id="map"></div>
 
-<div id="zoom-info">
-  Zoom: <span id="zoom-level">7</span> 
+<div id="zoom-info" class="fade-in-up">
+  <div>Zoom: <span id="zoom-level">7</span></div>
   <span id="markers-status">(Marcadores ocultos - Haz zoom para verlos)</span>
 </div>
 
-<button id="centrar-btn" title="Centrar en mi ubicación">
-  <svg width="24" height="24" fill="#007bff" viewBox="0 0 24 24">
+<button id="centrar-btn" class="fade-in-up" title="Centrar en mi ubicación">
+  <svg width="24" height="24" fill="#3b82f6" viewBox="0 0 24 24">
     <path d="M12 8a4 4 0 1 1 0 8 4 4 0 0 1 0-8zm10 4a10 10 0 0 0-10-10v2a8 8 0 0 1 8 8h2zm-10 10a10 10 0 0 0 10-10h-2a8 8 0 0 1-8 8v2zm-10-10a10 10 0 0 0 10 10v-2a8 8 0 0 1-8-8H2zm10-10A10 10 0 0 0 2 12h2a8 8 0 0 1 8-8V2z"/>
   </svg>
 </button>
 
 <div id="formulario">
-  <h3 style="margin-top: 0;">Añadir lugar</h3>
-  <input type="text" id="titulo" placeholder="Título" required />
+  <h3>✨ Añadir lugar</h3>
+  <input type="text" id="titulo" placeholder="Nombre del lugar" required />
   <select id="categoria">
-    <optgroup label="Comida">
+    <optgroup label="🍽️ Comida">
       <option value="bar">Bar</option>
       <option value="restaurante">Restaurante</option>
       <option value="supermercado">Supermercado</option>
       <option value="cafeteria">Cafetería</option>
     </optgroup>
-    <optgroup label="Ocio">
+    <optgroup label="🎉 Ocio">
       <option value="discoteca">Discoteca</option>
       <option value="playa">Playa</option>
       <option value="turistico">Monumento / Sitio turístico</option>
       <option value="gimnasio">Gimnasio</option>
     </optgroup>
-    <optgroup label="Servicios">
+    <optgroup label="🏢 Servicios">
       <option value="copisteria">Copistería</option>
       <option value="oficina">Oficina</option>
       <option value="cajero">Cajero automático</option>
       <option value="correos">Oficina de correos</option>
       <option value="tienda">Tienda</option>
     </optgroup>
-    <optgroup label="Transporte">
+    <optgroup label="🚌 Transporte">
       <option value="tren">Estación de tren</option>
       <option value="bus">Estación de bus</option>
     </optgroup>
-    <optgroup label="Salud">
+    <optgroup label="🏥 Salud">
       <option value="farmacia">Farmacia</option>
       <option value="centro_medico">Centro médico</option>
     </optgroup>
-    <optgroup label="Educación">
+    <optgroup label="📚 Educación">
       <option value="biblioteca">Biblioteca</option>
       <option value="facultad">Facultad</option>
       <option value="residencia">Residencia</option>
     </optgroup>
-    <optgroup label="Otros">
+    <optgroup label="📌 Otros">
       <option value="otro">Otro</option>
     </optgroup>
   </select>
-  <input type="text" id="horario" placeholder="Horario (opcional)" />
-  <textarea id="descripcion" rows="3" placeholder="Descripción (opcional)"></textarea>
-  <input type="text" id="precio" placeholder="Precio (opcional)" />
-  <button onclick="guardarLugar()">Guardar lugar</button>
-  <button onclick="cerrarFormulario()">Cerrar</button>
+  <input type="text" id="horario" placeholder="Horario (ej: 9:00 - 22:00)" />
+  <textarea id="descripcion" rows="3" placeholder="Descripción o comentarios..."></textarea>
+  <input type="text" id="precio" placeholder="Precio aproximado (ej: €15-20)" />
+  <div>
+    <button onclick="guardarLugar()">Guardar lugar</button>
+    <button onclick="cerrarFormulario()">Cancelar</button>
+  </div>
 </div>
 
 <script>
@@ -173,10 +467,10 @@
   );
 
   // Variables de control de zoom y carga
-  const ZOOM_MINIMO_MARCADORES = 10; // Zoom mínimo para mostrar marcadores
+  const ZOOM_MINIMO_MARCADORES = 10;
   let marcadoresVisibles = false;
-  let datosLugares = []; // Cache de datos
-  let marcadoresLayer = []; // Array para controlar marcadores
+  let datosLugares = [];
+  let marcadoresLayer = [];
 
   let latSeleccionada = null;
   let lngSeleccionada = null;
@@ -196,7 +490,7 @@
   }
 
   const map = L.map('map').setView([37.6, 14.0], 7);
-  L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png', {
+  L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', {
     attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions">CARTO</a>',
     subdomains: 'abcd',
     maxZoom: 20
@@ -204,40 +498,35 @@
 
   let positionMarker = null;
 
-  // Actualizar información de zoom en la interfaz
   function actualizarInfoZoom() {
     const zoomActual = map.getZoom();
     document.getElementById('zoom-level').textContent = zoomActual;
     
     const statusElement = document.getElementById('markers-status');
     if (zoomActual >= ZOOM_MINIMO_MARCADORES) {
-      statusElement.textContent = `(${datosLugares.length} lugares visibles)`;
-      statusElement.style.color = '#27ae60';
+      statusElement.textContent = `✅ ${datosLugares.length} lugares visibles`;
+      statusElement.style.color = '#059669';
     } else {
-      statusElement.textContent = '(Marcadores ocultos - Haz zoom para verlos)';
-      statusElement.style.color = '#e74c3c';
+      statusElement.textContent = '🔍 Haz zoom para ver los lugares';
+      statusElement.style.color = '#dc2626';
     }
   }
 
-  // Manejar cambios de zoom
   map.on('zoomend', function() {
     const zoomActual = map.getZoom();
     actualizarInfoZoom();
 
     if (zoomActual >= ZOOM_MINIMO_MARCADORES && !marcadoresVisibles) {
-      // Zoom suficiente y marcadores no visibles -> cargar
       if (datosLugares.length === 0) {
-        cargarLugares(); // Primera carga desde BD
+        cargarLugares();
       } else {
-        mostrarMarcadores(); // Usar datos en cache
+        mostrarMarcadores();
       }
     } else if (zoomActual < ZOOM_MINIMO_MARCADORES && marcadoresVisibles) {
-      // Zoom insuficiente y marcadores visibles -> ocultar
       ocultarMarcadores();
     }
   });
 
-  // Evento inicial para configurar el estado
   map.on('moveend', function() {
     actualizarInfoZoom();
   });
@@ -246,22 +535,17 @@
     const blueDotIcon = L.divIcon({
       className: 'blue-dot',
       html: `<div style="
-        width: 16px;
-        height: 16px;
+        width: 18px;
+        height: 18px;
         background: linear-gradient(135deg, #3b82f6, #1d4ed8);
         border-radius: 50%;
-        border: 3px solid white;
-        box-shadow: 0 4px 15px rgba(59, 130, 246, 0.4), 0 2px 8px rgba(59, 130, 246, 0.2);
-        animation: positionPulse 2s ease-in-out infinite;
-      "></div>
-      <style>
-        @keyframes positionPulse {
-          0%, 100% { transform: scale(1); }
-          50% { transform: scale(1.1); }
-        }
-      </style>`,
-      iconSize: [16, 16],
-      iconAnchor: [8, 8],
+        border: 4px solid white;
+        box-shadow: 0 6px 20px rgba(59, 130, 246, 0.4), 0 2px 8px rgba(59, 130, 246, 0.3);
+        position: relative;
+        z-index: 1000;
+      "></div>`,
+      iconSize: [18, 18],
+      iconAnchor: [9, 9],
     });
 
     if (!positionMarker) {
@@ -285,9 +569,33 @@
   }
 
   map.on('click', function (e) {
-    // Solo permitir agregar lugares si el zoom es suficiente
     if (map.getZoom() < ZOOM_MINIMO_MARCADORES) {
-      alert('Haz zoom para poder agregar lugares con precisión');
+      // Mostrar notificación más elegante
+      const notification = document.createElement('div');
+      notification.style.cssText = `
+        position: fixed;
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -50%);
+        background: rgba(239, 68, 68, 0.95);
+        color: white;
+        padding: 16px 24px;
+        border-radius: 12px;
+        font-weight: 500;
+        font-size: 0.95rem;
+        z-index: 10000;
+        backdrop-filter: blur(20px);
+        box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+        animation: slideUpFade 0.3s ease-out;
+      `;
+      notification.textContent = '🔍 Haz zoom para agregar lugares con precisión';
+      document.body.appendChild(notification);
+      
+      setTimeout(() => {
+        notification.style.opacity = '0';
+        notification.style.transform = 'translate(-50%, -50%) translateY(-10px)';
+        setTimeout(() => notification.remove(), 300);
+      }, 2500);
       return;
     }
 
@@ -297,15 +605,16 @@
     if (marcadorTemp) map.removeLayer(marcadorTemp);
 
     marcadorTemp = L.circleMarker([latSeleccionada, lngSeleccionada], {
-      radius: 8,
-      color: '#007bff',
-      fillColor: '#007bff',
-      fillOpacity: 0.5
+      radius: 10,
+      color: '#3b82f6',
+      fillColor: '#3b82f6',
+      fillOpacity: 0.3,
+      weight: 3
     }).addTo(map);
 
     const puntoPantalla = map.latLngToContainerPoint(e.latlng);
-    formulario.style.left = `${puntoPantalla.x}px`;
-    formulario.style.top = `${puntoPantalla.y}px`;
+    formulario.style.left = `${Math.min(puntoPantalla.x, window.innerWidth - 360)}px`;
+    formulario.style.top = `${Math.min(puntoPantalla.y, window.innerHeight - 400)}px`;
     formulario.style.display = "block";
   });
 
@@ -317,9 +626,41 @@
     const precio = document.getElementById("precio").value;
 
     if (!titulo || !categoria || latSeleccionada === null || lngSeleccionada === null) {
-      alert("Faltan datos obligatorios.");
+      // Mostrar notificación elegante
+      const notification = document.createElement('div');
+      notification.style.cssText = `
+        position: fixed;
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -50%);
+        background: rgba(251, 146, 60, 0.95);
+        color: white;
+        padding: 16px 24px;
+        border-radius: 12px;
+        font-weight: 500;
+        font-size: 0.95rem;
+        z-index: 10000;
+        backdrop-filter: blur(20px);
+        box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+        animation: slideUpFade 0.3s ease-out;
+      `;
+      notification.textContent = '⚠️ Completa el título y categoría';
+      document.body.appendChild(notification);
+      
+      setTimeout(() => {
+        notification.style.opacity = '0';
+        notification.style.transform = 'translate(-50%, -50%) translateY(-10px)';
+        setTimeout(() => notification.remove(), 300);
+      }, 2500);
       return;
     }
+
+    // Añadir estado de carga al botón
+    const botonGuardar = event.target;
+    const textoOriginal = botonGuardar.textContent;
+    botonGuardar.textContent = 'Guardando...';
+    botonGuardar.classList.add('loading');
+    botonGuardar.disabled = true;
 
     const datos = {
       titulo,
@@ -334,14 +675,44 @@
 
     const { data, error } = await supabaseClient.from('lugares').insert([datos]);
 
+    // Remover estado de carga
+    botonGuardar.textContent = textoOriginal;
+    botonGuardar.classList.remove('loading');
+    botonGuardar.disabled = false;
+
     if (error) {
-      alert("Error al guardar lugar: " + error.message);
+      console.error("Error al guardar lugar:", error.message);
       return;
     }
 
     cerrarFormulario();
-    // Recargar datos y actualizar marcadores si están visibles
     await cargarLugares();
+    
+    // Mostrar notificación de éxito
+    const notification = document.createElement('div');
+    notification.style.cssText = `
+      position: fixed;
+      top: 100px;
+      right: 30px;
+      background: rgba(5, 150, 105, 0.95);
+      color: white;
+      padding: 16px 24px;
+      border-radius: 12px;
+      font-weight: 500;
+      font-size: 0.95rem;
+      z-index: 10000;
+      backdrop-filter: blur(20px);
+      box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+      animation: slideUpFade 0.3s ease-out;
+    `;
+    notification.textContent = '✅ Lugar guardado correctamente';
+    document.body.appendChild(notification);
+    
+    setTimeout(() => {
+      notification.style.opacity = '0';
+      notification.style.transform = 'translateX(100px)';
+      setTimeout(() => notification.remove(), 300);
+    }, 3000);
   }
 
   function cerrarFormulario() {
@@ -360,54 +731,55 @@
     lngSeleccionada = null;
   }
 
-  // Función para devolver color según categoría
   function obtenerColorPorCategoria(categoria) {
     const colores = {
-      bar: '#e74c3c',
-      restaurante: '#e67e22',
-      supermercado: '#f1c40f',
-      cafeteria: '#d35400',
-      discoteca: '#9b59b6',
-      playa: '#3498db',
-      turistico: '#2ecc71',
-      gimnasio: '#16a085',
-      copisteria: '#95a5a6',
-      oficina: '#34495e',
-      cajero: '#27ae60',
-      correos: '#1abc9c',
-      tienda: '#8e44ad',
-      tren: '#c0392b',
-      bus: '#7f8c8d',
-      farmacia: '#2980b9',
-      centro_medico: '#d35400',
-      biblioteca: '#2c3e50',
-      facultad: '#27ae60',
-      residencia: '#16a085',
-      otro: '#7f8c8d'
+      bar: '#ef4444',
+      restaurante: '#f97316',
+      supermercado: '#eab308',
+      cafeteria: '#ea580c',
+      discoteca: '#a855f7',
+      playa: '#06b6d4',
+      turistico: '#10b981',
+      gimnasio: '#14b8a6',
+      copisteria: '#6b7280',
+      oficina: '#374151',
+      cajero: '#059669',
+      correos: '#0891b2',
+      tienda: '#9333ea',
+      tren: '#dc2626',
+      bus: '#64748b',
+      farmacia: '#2563eb',
+      centro_medico: '#ea580c',
+      biblioteca: '#1e40af',
+      facultad: '#059669',
+      residencia: '#14b8a6',
+      otro: '#64748b'
     };
-    return colores[categoria] || '#34495e';
+    return colores[categoria] || '#374151';
   }
 
-  // Crear icono de marcador coloreado con diseño moderno
   function crearIconoColor(color) {
     return L.divIcon({
-      className: '',
+      className: 'modern-marker',
       html: `<div style="
-        width: 20px;
-        height: 20px;
+        width: 24px;
+        height: 24px;
         background: linear-gradient(135deg, ${color}, ${color}dd);
         border-radius: 50%;
-        border: 3px solid white;
-        box-shadow: 0 4px 12px ${color}60, 0 2px 4px ${color}40;
+        border: 4px solid white;
+        box-shadow: 
+          0 6px 20px ${color}40, 
+          0 2px 8px ${color}30,
+          0 0 0 1px rgba(0,0,0,0.05);
         transform: translateY(-2px);
         transition: all 0.3s cubic-bezier(0.4, 0.0, 0.2, 1);
+        position: relative;
       "></div>`,
-      iconSize: [20, 20],
-      iconAnchor: [10, 10],
+      iconSize: [24, 24],
+      iconAnchor: [12, 12],
     });
   }
 
-  // Función para cargar los lugares desde Supabase
   async function cargarLugares() {
     try {
       const { data, error } = await supabaseClient.from('lugares').select();
@@ -417,10 +789,8 @@
         return;
       }
 
-      // Actualizar cache de datos
       datosLugares = data || [];
       
-      // Solo mostrar marcadores si el zoom es suficiente
       if (map.getZoom() >= ZOOM_MINIMO_MARCADORES) {
         mostrarMarcadores();
       }
@@ -431,34 +801,38 @@
     }
   }
 
-  // Función para mostrar marcadores en el mapa
   function mostrarMarcadores() {
-    // Limpiar marcadores existentes
     ocultarMarcadores();
 
-    datosLugares.forEach(lugar => {
+    datosLugares.forEach((lugar, index) => {
       const iconoColor = crearIconoColor(obtenerColorPorCategoria(lugar.categoria));
       const popupHTML = `
         <div class="popup-content">
           <div class="popup-title">${escapeHtml(lugar.titulo)}</div>
           <div class="popup-category">${escapeHtml(lugar.categoria.replace('_', ' '))}</div>
           ${lugar.horario ? `<div class="popup-field"><span class="popup-label">Horario:</span><span class="popup-text">${escapeHtml(lugar.horario)}</span></div>` : ''}
-          ${lugar.descripcion ? `<div class="popup-field"><span class="popup-label">Descripción:</span><span class="popup-text">${escapeHtml(lugar.descripcion)}</span></div>` : ''}
-          ${lugar.precio ? `<div class="popup-field"><span class="popup-price">Precio: ${escapeHtml(lugar.precio)}</span></div>` : ''}
+          ${lugar.descripcion ? `<div class="popup-field"><span class="popup-label">Info:</span><span class="popup-text">${escapeHtml(lugar.descripcion)}</span></div>` : ''}
+          ${lugar.precio ? `<div class="popup-field"><span class="popup-price">💰 ${escapeHtml(lugar.precio)}</span></div>` : ''}
         </div>`;
 
       const marcador = L.marker([lugar.lat, lugar.lng], { icon: iconoColor })
-        .bindPopup(popupHTML);
+        .bindPopup(popupHTML, {
+          maxWidth: 300,
+          className: 'modern-popup'
+        });
+      
+      // Añadir efecto de aparición escalonada
+      setTimeout(() => {
+        marcador.addTo(map);
+      }, index * 50);
       
       marcadoresLayer.push(marcador);
-      marcador.addTo(map);
     });
 
     marcadoresVisibles = true;
     actualizarInfoZoom();
   }
 
-  // Función para ocultar marcadores
   function ocultarMarcadores() {
     marcadoresLayer.forEach(marcador => {
       map.removeLayer(marcador);
@@ -468,7 +842,6 @@
     actualizarInfoZoom();
   }
 
-  // Escapar texto para prevenir XSS
   function escapeHtml(text) {
     if (!text) return '';
     return text.replace(/[&<>"']/g, function(m) {
@@ -484,12 +857,91 @@
 
   document.getElementById("centrar-btn").addEventListener("click", () => {
     if (positionMarker) {
-      map.flyTo(positionMarker.getLatLng(), 15, { duration: 2 });
+      map.flyTo(positionMarker.getLatLng(), 15, { 
+        duration: 2,
+        easeLinearity: 0.25
+      });
+    } else {
+      // Si no hay ubicación, mostrar notificación
+      const notification = document.createElement('div');
+      notification.style.cssText = `
+        position: fixed;
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -50%);
+        background: rgba(59, 130, 246, 0.95);
+        color: white;
+        padding: 16px 24px;
+        border-radius: 12px;
+        font-weight: 500;
+        font-size: 0.95rem;
+        z-index: 10000;
+        backdrop-filter: blur(20px);
+        box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+        animation: slideUpFade 0.3s ease-out;
+      `;
+      notification.textContent = '📍 Buscando tu ubicación...';
+      document.body.appendChild(notification);
+      
+      setTimeout(() => {
+        notification.style.opacity = '0';
+        notification.style.transform = 'translate(-50%, -50%) translateY(-10px)';
+        setTimeout(() => notification.remove(), 300);
+      }, 2000);
     }
   });
 
-  // Inicializar información de zoom
+  // Cerrar formulario con tecla Escape
+  document.addEventListener('keydown', function(e) {
+    if (e.key === 'Escape' && formulario.style.display === 'block') {
+      cerrarFormulario();
+    }
+  });
+
+  // Efecto de typing en placeholders
+  function typeEffect(element, texts, index = 0, charIndex = 0) {
+    if (charIndex < texts[index].length) {
+      element.placeholder = texts[index].substring(0, charIndex + 1);
+      setTimeout(() => typeEffect(element, texts, index, charIndex + 1), 100);
+    } else {
+      setTimeout(() => {
+        const nextIndex = (index + 1) % texts.length;
+        element.placeholder = '';
+        setTimeout(() => typeEffect(element, texts, nextIndex, 0), 500);
+      }, 2000);
+    }
+  }
+
+  // Inicializar efecto de typing para el título
+  const tituloInput = document.getElementById('titulo');
+  const ejemplosTitulos = [
+    'Pizzería da Marco',
+    'Biblioteca Central',
+    'Playa San Vito',
+    'Gym Fitness Plus',
+    'Bar del Centro'
+  ];
+  
+  setTimeout(() => {
+    typeEffect(tituloInput, ejemplosTitulos);
+  }, 1000);
+
+  // Animación suave al cargar la página
+  document.addEventListener('DOMContentLoaded', function() {
+    document.body.style.opacity = '0';
+    setTimeout(() => {
+      document.body.style.transition = 'opacity 0.8s ease-in-out';
+      document.body.style.opacity = '1';
+    }, 100);
+  });
+
+  // Inicializar
   actualizarInfoZoom();
+  
+  // Precargar algunos lugares si el zoom inicial es suficiente
+  if (map.getZoom() >= ZOOM_MINIMO_MARCADORES) {
+    cargarLugares();
+  }
 
 </script>
 
