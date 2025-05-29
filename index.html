@@ -11,16 +11,6 @@
     html, body { margin: 0; height: 100%; }
     #map { width: 100%; height: 100vh; }
 
-    .icon-arrow svg {
-      filter: drop-shadow(0 0 1.5px rgba(0,0,0,0.3));
-    }
-
-    @keyframes pulse {
-      0% { opacity: 0.2; transform: scale(1); }
-      50% { opacity: 0.5; transform: scale(1.6); }
-      100% { opacity: 0.2; transform: scale(1); }
-    }
-
     .pulse-circle {
       border: 2px solid #007bff;
       border-radius: 50%;
@@ -33,6 +23,12 @@
       margin-left: -12px;
       margin-top: -12px;
       pointer-events: none;
+    }
+
+    @keyframes pulse {
+      0% { opacity: 0.2; transform: scale(1); }
+      50% { opacity: 0.5; transform: scale(1.6); }
+      100% { opacity: 0.2; transform: scale(1); }
     }
 
     #formulario {
@@ -134,8 +130,7 @@
 </div>
 
 <script>
-  // Inicializa Supabase
-  const supabase = supabase.createClient(
+  const supabaseClient = supabase.createClient(
     'https://lqwwqdyqoqltxpmlejxi.supabase.co',
     'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imxxd3dxZHlxb3FsdHhwbWxlanhpIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDg1MDM4OTYsImV4cCI6MjA2NDA3OTg5Nn0.63Eoa39OIjDUlxHCPLZ9aRH1GK6-WWB_MkFgsylBJWI'
   );
@@ -145,9 +140,6 @@
   let marcadorTemp = null;
   const formulario = document.getElementById("formulario");
 
-  // -------------------------
-  // GENERAR ID ANÓNIMO
-  // -------------------------
   function generarUUID() {
     return ([1e7]+-1e3+-4e3+-8e3+-1e11).replace(/[018]/g, c =>
       (c ^ crypto.getRandomValues(new Uint8Array(1))[0] & 15 >> c / 4).toString(16)
@@ -160,15 +152,11 @@
     localStorage.setItem("usuario_id", usuarioId);
   }
 
-  // -------------------------
-  // MAPA
-  // -------------------------
   const map = L.map('map').setView([37.6, 14.0], 7);
   L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
     attribution: '&copy; OpenStreetMap contributors'
   }).addTo(map);
 
-  // Localización
   let positionMarker = null;
   let pulseMarker = null;
 
@@ -203,7 +191,6 @@
     );
   }
 
-  // Click en el mapa
   map.on('click', function (e) {
     latSeleccionada = e.latlng.lat;
     lngSeleccionada = e.latlng.lng;
@@ -223,7 +210,6 @@
     formulario.style.display = "block";
   });
 
-  // Guardar lugar en Supabase
   async function guardarLugar() {
     const titulo = document.getElementById("titulo").value;
     const categoria = document.getElementById("categoria").value;
@@ -247,14 +233,14 @@
       usuario_id: usuarioId,
     };
 
-    const { data, error } = await supabase.from('lugares').insert([datos]);
+    const { data, error } = await supabaseClient.from('lugares').insert([datos]);
 
     if (error) {
       console.error("Error al guardar en Supabase:", error.message);
       alert("Error al guardar el lugar.");
     } else {
-      console.log("Lugar guardado:", data);
       cerrarFormulario();
+      cargarLugares();
     }
   }
 
@@ -272,6 +258,33 @@
   }
 
   formulario.addEventListener("click", (e) => e.stopPropagation());
+
+  // FUNCIONALIDAD NUEVA: cargar lugares desde Supabase
+  async function cargarLugares() {
+    const { data, error } = await supabaseClient.from("lugares").select("*");
+
+    if (error) {
+      console.error("Error al cargar lugares:", error.message);
+      return;
+    }
+
+    data.forEach((lugar) => {
+      const marker = L.marker([lugar.lat, lugar.lng]).addTo(map);
+
+      const contenidoPopup = `
+        <strong>${lugar.titulo}</strong><br>
+        Categoría: ${lugar.categoria}<br>
+        ${lugar.descripcion ? `<em>${lugar.descripcion}</em><br>` : ''}
+        ${lugar.precio ? `💶 Precio: ${lugar.precio}<br>` : ''}
+        ${lugar.horario ? `🕒 Horario: ${lugar.horario}<br>` : ''}
+      `;
+
+      marker.bindPopup(contenidoPopup);
+    });
+  }
+
+  // Llama a la función al inicio
+  cargarLugares();
 </script>
 
 </body>
