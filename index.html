@@ -402,63 +402,65 @@
 
 <div id="zoom-info" class="fade-in-up">
   <div>Zoom: <span id="zoom-level">7</span></div>
-  <span id="markers-status">(Marcadores ocultos - Haz zoom para verlos)</span>
+  <span id="markers-status">(Markers hidden – Zoom in to see them)</span>
 </div>
 
-<button id="centrar-btn" class="fade-in-up" title="Centrar en mi ubicación">
+<button id="centrar-btn" class="fade-in-up" title="Center on my location">
   <svg width="24" height="24" fill="#3b82f6" viewBox="0 0 24 24">
     <path d="M12 8a4 4 0 1 1 0 8 4 4 0 0 1 0-8zm10 4a10 10 0 0 0-10-10v2a8 8 0 0 1 8 8h2zm-10 10a10 10 0 0 0 10-10h-2a8 8 0 0 1-8 8v2zm-10-10a10 10 0 0 0 10 10v-2a8 8 0 0 1-8-8H2zm10-10A10 10 0 0 0 2 12h2a8 8 0 0 1 8-8V2z"/>
   </svg>
 </button>
 
 <div id="formulario">
-  <h3>✨ Añadir lugar</h3>
-  <input type="text" id="titulo" placeholder="Nombre del lugar" required />
+  <h3>✨ Add a Place</h3>
+  <input type="text" id="titulo" placeholder="Place name" required />
   <select id="categoria">
-    <optgroup label="🍽️ Comida">
+    <optgroup label="🍽️ Food">
       <option value="bar">Bar</option>
-      <option value="restaurante">Restaurante</option>
-      <option value="supermercado">Supermercado</option>
-      <option value="cafeteria">Cafetería</option>
+      <option value="restaurante">Restaurant</option>
+      <option value="supermercado">Supermarket</option>
+      <option value="cafeteria">Café</option>
     </optgroup>
-    <optgroup label="🎉 Ocio">
-      <option value="discoteca">Discoteca</option>
-      <option value="playa">Playa</option>
-      <option value="turistico">Monumento / Sitio turístico</option>
-      <option value="gimnasio">Gimnasio</option>
+    <optgroup label="🎉 Leisure">
+      <option value="discoteca">Nightclub</option>
+      <option value="playa">Beach</option>
+      <option value="turistico">Monument / Tourist spot</option>
+      <option value="gimnasio">Gym</option>
     </optgroup>
-    <optgroup label="🏢 Servicios">
-      <option value="copisteria">Copistería</option>
-      <option value="oficina">Oficina</option>
-      <option value="cajero">Cajero automático</option>
-      <option value="correos">Oficina de correos</option>
-      <option value="tienda">Tienda</option>
+    <optgroup label="🏢 Services">
+      <option value="copisteria">Copy shop</option>
+      <option value="oficina">Office</option>
+      <option value="cajero">ATM</option>
+      <option value="correos">Post office</option>
+      <option value="tienda">Shop</option>
+      <option value="hotel">Hotel</option>
     </optgroup>
-    <optgroup label="🚌 Transporte">
-      <option value="tren">Estación de tren</option>
-      <option value="bus">Estación de bus</option>
+    <optgroup label="🚌 Transport">
+      <option value="tren">Train station</option>
+      <option value="bus">Bus station</option>
     </optgroup>
-    <optgroup label="🏥 Salud">
-      <option value="farmacia">Farmacia</option>
-      <option value="centro_medico">Centro médico</option>
+    <optgroup label="🏥 Health">
+      <option value="farmacia">Pharmacy</option>
+      <option value="centro_medico">Medical center</option>
     </optgroup>
-    <optgroup label="📚 Educación">
-      <option value="biblioteca">Biblioteca</option>
-      <option value="facultad">Facultad</option>
-      <option value="residencia">Residencia</option>
+    <optgroup label="📚 Education">
+      <option value="biblioteca">Library</option>
+      <option value="facultad">Faculty</option>
+      <option value="residencia">Dormitory</option>
     </optgroup>
-    <optgroup label="📌 Otros">
-      <option value="otro">Otro</option>
+    <optgroup label="📌 Others">
+      <option value="otro">Other</option>
     </optgroup>
   </select>
-  <input type="text" id="horario" placeholder="Horario (ej: 9:00 - 22:00)" />
-  <textarea id="descripcion" rows="3" placeholder="Descripción o comentarios..."></textarea>
-  <input type="text" id="precio" placeholder="Precio aproximado (ej: €15-20)" />
+  <input type="text" id="horario" placeholder="Opening hours (e.g. 9:00 AM - 10:00 PM)" />
+  <textarea id="descripcion" rows="3" placeholder="Description or comments..."></textarea>
+  <input type="text" id="precio" placeholder="Approximate price (e.g. €15-20)" />
   <div>
-    <button onclick="guardarLugar()">Guardar lugar</button>
-    <button onclick="cerrarFormulario()">Cancelar</button>
+    <button onclick="guardarLugar()">Save place</button>
+    <button onclick="cerrarFormulario()">Cancel</button>
   </div>
 </div>
+
 
 <script>
   const supabaseClient = supabase.createClient(
@@ -491,7 +493,7 @@
 
   const map = L.map('map').setView([37.6, 14.0], 7);
   L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', {
-    attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions">CARTO</a>',
+    attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions">CARTO</a> and &copy; JanQ',
     subdomains: 'abcd',
     maxZoom: 20
   }).addTo(map);
@@ -753,6 +755,7 @@
       biblioteca: '#1e40af',
       facultad: '#059669',
       residencia: '#14b8a6',
+      hotel: '#3c8535',
       otro: '#64748b'
     };
     return colores[categoria] || '#374151';
