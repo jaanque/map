@@ -196,8 +196,10 @@
   }
 
   const map = L.map('map').setView([37.6, 14.0], 7);
-  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-    attribution: '&copy; OpenStreetMap contributors'
+  L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png', {
+    attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions">CARTO</a>',
+    subdomains: 'abcd',
+    maxZoom: 20
   }).addTo(map);
 
   let positionMarker = null;
@@ -243,7 +245,21 @@
   function actualizarPosicion(lat, lng) {
     const blueDotIcon = L.divIcon({
       className: 'blue-dot',
-      html: `<div style="width: 12px;height: 12px;background: #007bff;border-radius: 50%;border: 2px solid white;box-shadow: 0 0 3px #007bffaa;"></div>`,
+      html: `<div style="
+        width: 16px;
+        height: 16px;
+        background: linear-gradient(135deg, #3b82f6, #1d4ed8);
+        border-radius: 50%;
+        border: 3px solid white;
+        box-shadow: 0 4px 15px rgba(59, 130, 246, 0.4), 0 2px 8px rgba(59, 130, 246, 0.2);
+        animation: positionPulse 2s ease-in-out infinite;
+      "></div>
+      <style>
+        @keyframes positionPulse {
+          0%, 100% { transform: scale(1); }
+          50% { transform: scale(1.1); }
+        }
+      </style>`,
       iconSize: [16, 16],
       iconAnchor: [8, 8],
     });
@@ -372,20 +388,22 @@
     return colores[categoria] || '#34495e';
   }
 
-  // Crear icono de marcador coloreado
+  // Crear icono de marcador coloreado con diseño moderno
   function crearIconoColor(color) {
     return L.divIcon({
       className: '',
       html: `<div style="
-        width: 18px;
-        height: 18px;
-        background-color: ${color};
+        width: 20px;
+        height: 20px;
+        background: linear-gradient(135deg, ${color}, ${color}dd);
         border-radius: 50%;
-        border: 2px solid white;
-        box-shadow: 0 0 6px ${color};
+        border: 3px solid white;
+        box-shadow: 0 4px 12px ${color}60, 0 2px 4px ${color}40;
+        transform: translateY(-2px);
+        transition: all 0.3s cubic-bezier(0.4, 0.0, 0.2, 1);
       "></div>`,
-      iconSize: [18, 18],
-      iconAnchor: [9, 9],
+      iconSize: [20, 20],
+      iconAnchor: [10, 10],
     });
   }
 
