@@ -11,25 +11,7 @@
     html, body { margin: 0; height: 100%; }
     #map { width: 100%; height: 100vh; }
 
-    .pulse-circle {
-      border: 2px solid #007bff;
-      border-radius: 50%;
-      width: 24px;
-      height: 24px;
-      animation: pulse 3s ease-in-out infinite;
-      position: absolute;
-      top: 50%;
-      left: 50%;
-      margin-left: -12px;
-      margin-top: -12px;
-      pointer-events: none;
-    }
 
-    @keyframes pulse {
-      0% { opacity: 0.2; transform: scale(1); }
-      50% { opacity: 0.5; transform: scale(1.6); }
-      100% { opacity: 0.2; transform: scale(1); }
-    }
 
     #formulario {
       display: none;
@@ -70,11 +52,66 @@
     #centrar-btn:hover {
       transform: scale(1.1);
     }
+
+    #zoom-info {
+      position: absolute;
+      top: 10px;
+      left: 10px;
+      background: rgba(255, 255, 255, 0.9);
+      padding: 8px 12px;
+      border-radius: 6px;
+      font-size: 0.9em;
+      color: #666;
+      z-index: 999;
+      border: 1px solid #ddd;
+    }
+
+    /* Estilos para popup personalizados */
+    .popup-content {
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      line-height: 1.4;
+      color: #333;
+      max-width: 260px;
+    }
+    .popup-title {
+      font-weight: 700;
+      font-size: 1.2em;
+      margin-bottom: 4px;
+      color: #007bff;
+    }
+    .popup-category {
+      font-weight: 600;
+      font-size: 0.95em;
+      color: #555;
+      margin-bottom: 6px;
+      text-transform: capitalize;
+    }
+    .popup-field {
+      margin-bottom: 6px;
+    }
+    .popup-label {
+      font-weight: 600;
+      color: #555;
+    }
+    .popup-text {
+      margin-left: 6px;
+      color: #444;
+    }
+    .popup-price {
+      font-weight: 700;
+      color: #27ae60;
+      font-size: 1.1em;
+    }
   </style>
 </head>
 <body>
 
 <div id="map"></div>
+
+<div id="zoom-info">
+  Zoom: <span id="zoom-level">7</span> 
+  <span id="markers-status">(Marcadores ocultos - Haz zoom para verlos)</span>
+</div>
 
 <button id="centrar-btn" title="Centrar en mi ubicación">
   <svg width="24" height="24" fill="#007bff" viewBox="0 0 24 24">
@@ -135,6 +172,12 @@
     'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imxxd3dxZHlxb3FsdHhwbWxlanhpIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDg1MDM4OTYsImV4cCI6MjA2NDA3OTg5Nn0.63Eoa39OIjDUlxHCPLZ9aRH1GK6-WWB_MkFgsylBJWI'
   );
 
+  // Variables de control de zoom y carga
+  const ZOOM_MINIMO_MARCADORES = 10; // Zoom mínimo para mostrar marcadores
+  let marcadoresVisibles = false;
+  let datosLugares = []; // Cache de datos
+  let marcadoresLayer = []; // Array para controlar marcadores
+
   let latSeleccionada = null;
   let lngSeleccionada = null;
   let marcadorTemp = null;
@@ -158,7 +201,44 @@
   }).addTo(map);
 
   let positionMarker = null;
-  let pulseMarker = null;
+
+  // Actualizar información de zoom en la interfaz
+  function actualizarInfoZoom() {
+    const zoomActual = map.getZoom();
+    document.getElementById('zoom-level').textContent = zoomActual;
+    
+    const statusElement = document.getElementById('markers-status');
+    if (zoomActual >= ZOOM_MINIMO_MARCADORES) {
+      statusElement.textContent = `(${datosLugares.length} lugares visibles)`;
+      statusElement.style.color = '#27ae60';
+    } else {
+      statusElement.textContent = '(Marcadores ocultos - Haz zoom para verlos)';
+      statusElement.style.color = '#e74c3c';
+    }
+  }
+
+  // Manejar cambios de zoom
+  map.on('zoomend', function() {
+    const zoomActual = map.getZoom();
+    actualizarInfoZoom();
+
+    if (zoomActual >= ZOOM_MINIMO_MARCADORES && !marcadoresVisibles) {
+      // Zoom suficiente y marcadores no visibles -> cargar
+      if (datosLugares.length === 0) {
+        cargarLugares(); // Primera carga desde BD
+      } else {
+        mostrarMarcadores(); // Usar datos en cache
+      }
+    } else if (zoomActual < ZOOM_MINIMO_MARCADORES && marcadoresVisibles) {
+      // Zoom insuficiente y marcadores visibles -> ocultar
+      ocultarMarcadores();
+    }
+  });
+
+  // Evento inicial para configurar el estado
+  map.on('moveend', function() {
+    actualizarInfoZoom();
+  });
 
   function actualizarPosicion(lat, lng) {
     const blueDotIcon = L.divIcon({
@@ -168,14 +248,10 @@
       iconAnchor: [8, 8],
     });
 
-    const pulseIcon = L.divIcon({ className: 'pulse-circle', html: '', iconSize: [24, 24], iconAnchor: [12, 12] });
-
     if (!positionMarker) {
-      pulseMarker = L.marker([lat, lng], { icon: pulseIcon, interactive: false }).addTo(map);
       positionMarker = L.marker([lat, lng], { icon: blueDotIcon, interactive: false }).addTo(map);
     } else {
       positionMarker.setLatLng([lat, lng]);
-      pulseMarker.setLatLng([lat, lng]);
     }
   }
 
@@ -184,6 +260,7 @@
       (position) => {
         const { latitude, longitude } = position.coords;
         actualizarPosicion(latitude, longitude);
+
         map.flyTo([latitude, longitude], 15, { duration: 2 });
       },
       (error) => console.warn("Ubicación no disponible:", error.message),
@@ -192,6 +269,12 @@
   }
 
   map.on('click', function (e) {
+    // Solo permitir agregar lugares si el zoom es suficiente
+    if (map.getZoom() < ZOOM_MINIMO_MARCADORES) {
+      alert('Haz zoom para poder agregar lugares con precisión');
+      return;
+    }
+
     latSeleccionada = e.latlng.lat;
     lngSeleccionada = e.latlng.lng;
 
@@ -230,23 +313,25 @@
       precio,
       lat: latSeleccionada,
       lng: lngSeleccionada,
-      usuario_id: usuarioId,
+      usuario_id: usuarioId
     };
 
     const { data, error } = await supabaseClient.from('lugares').insert([datos]);
 
     if (error) {
-      console.error("Error al guardar en Supabase:", error.message);
-      alert("Error al guardar el lugar.");
-    } else {
-      cerrarFormulario();
-      cargarLugares();
+      alert("Error al guardar lugar: " + error.message);
+      return;
     }
+
+    cerrarFormulario();
+    // Recargar datos y actualizar marcadores si están visibles
+    await cargarLugares();
   }
 
   function cerrarFormulario() {
     formulario.style.display = "none";
     document.getElementById("titulo").value = "";
+    document.getElementById("categoria").value = "bar";
     document.getElementById("horario").value = "";
     document.getElementById("descripcion").value = "";
     document.getElementById("precio").value = "";
@@ -255,36 +340,139 @@
       map.removeLayer(marcadorTemp);
       marcadorTemp = null;
     }
+    latSeleccionada = null;
+    lngSeleccionada = null;
   }
 
-  formulario.addEventListener("click", (e) => e.stopPropagation());
+  // Función para devolver color según categoría
+  function obtenerColorPorCategoria(categoria) {
+    const colores = {
+      bar: '#e74c3c',
+      restaurante: '#e67e22',
+      supermercado: '#f1c40f',
+      cafeteria: '#d35400',
+      discoteca: '#9b59b6',
+      playa: '#3498db',
+      turistico: '#2ecc71',
+      gimnasio: '#16a085',
+      copisteria: '#95a5a6',
+      oficina: '#34495e',
+      cajero: '#27ae60',
+      correos: '#1abc9c',
+      tienda: '#8e44ad',
+      tren: '#c0392b',
+      bus: '#7f8c8d',
+      farmacia: '#2980b9',
+      centro_medico: '#d35400',
+      biblioteca: '#2c3e50',
+      facultad: '#27ae60',
+      residencia: '#16a085',
+      otro: '#7f8c8d'
+    };
+    return colores[categoria] || '#34495e';
+  }
 
-  // FUNCIONALIDAD NUEVA: cargar lugares desde Supabase
-  async function cargarLugares() {
-    const { data, error } = await supabaseClient.from("lugares").select("*");
-
-    if (error) {
-      console.error("Error al cargar lugares:", error.message);
-      return;
-    }
-
-    data.forEach((lugar) => {
-      const marker = L.marker([lugar.lat, lugar.lng]).addTo(map);
-
-      const contenidoPopup = `
-        <strong>${lugar.titulo}</strong><br>
-        Categoría: ${lugar.categoria}<br>
-        ${lugar.descripcion ? `<em>${lugar.descripcion}</em><br>` : ''}
-        ${lugar.precio ? `💶 Precio: ${lugar.precio}<br>` : ''}
-        ${lugar.horario ? `🕒 Horario: ${lugar.horario}<br>` : ''}
-      `;
-
-      marker.bindPopup(contenidoPopup);
+  // Crear icono de marcador coloreado
+  function crearIconoColor(color) {
+    return L.divIcon({
+      className: '',
+      html: `<div style="
+        width: 18px;
+        height: 18px;
+        background-color: ${color};
+        border-radius: 50%;
+        border: 2px solid white;
+        box-shadow: 0 0 6px ${color};
+      "></div>`,
+      iconSize: [18, 18],
+      iconAnchor: [9, 9],
     });
   }
 
-  // Llama a la función al inicio
-  cargarLugares();
+  // Función para cargar los lugares desde Supabase
+  async function cargarLugares() {
+    try {
+      const { data, error } = await supabaseClient.from('lugares').select();
+
+      if (error) {
+        console.error("Error cargando lugares:", error.message);
+        return;
+      }
+
+      // Actualizar cache de datos
+      datosLugares = data || [];
+      
+      // Solo mostrar marcadores si el zoom es suficiente
+      if (map.getZoom() >= ZOOM_MINIMO_MARCADORES) {
+        mostrarMarcadores();
+      }
+      
+      actualizarInfoZoom();
+    } catch (error) {
+      console.error("Error en cargarLugares:", error);
+    }
+  }
+
+  // Función para mostrar marcadores en el mapa
+  function mostrarMarcadores() {
+    // Limpiar marcadores existentes
+    ocultarMarcadores();
+
+    datosLugares.forEach(lugar => {
+      const iconoColor = crearIconoColor(obtenerColorPorCategoria(lugar.categoria));
+      const popupHTML = `
+        <div class="popup-content">
+          <div class="popup-title">${escapeHtml(lugar.titulo)}</div>
+          <div class="popup-category">${escapeHtml(lugar.categoria.replace('_', ' '))}</div>
+          ${lugar.horario ? `<div class="popup-field"><span class="popup-label">Horario:</span><span class="popup-text">${escapeHtml(lugar.horario)}</span></div>` : ''}
+          ${lugar.descripcion ? `<div class="popup-field"><span class="popup-label">Descripción:</span><span class="popup-text">${escapeHtml(lugar.descripcion)}</span></div>` : ''}
+          ${lugar.precio ? `<div class="popup-field"><span class="popup-price">Precio: ${escapeHtml(lugar.precio)}</span></div>` : ''}
+        </div>`;
+
+      const marcador = L.marker([lugar.lat, lugar.lng], { icon: iconoColor })
+        .bindPopup(popupHTML);
+      
+      marcadoresLayer.push(marcador);
+      marcador.addTo(map);
+    });
+
+    marcadoresVisibles = true;
+    actualizarInfoZoom();
+  }
+
+  // Función para ocultar marcadores
+  function ocultarMarcadores() {
+    marcadoresLayer.forEach(marcador => {
+      map.removeLayer(marcador);
+    });
+    marcadoresLayer = [];
+    marcadoresVisibles = false;
+    actualizarInfoZoom();
+  }
+
+  // Escapar texto para prevenir XSS
+  function escapeHtml(text) {
+    if (!text) return '';
+    return text.replace(/[&<>"']/g, function(m) {
+      return ({
+        '&': '&amp;',
+        '<': '&lt;',
+        '>': '&gt;',
+        '"': '&quot;',
+        "'": '&#39;'
+      })[m];
+    });
+  }
+
+  document.getElementById("centrar-btn").addEventListener("click", () => {
+    if (positionMarker) {
+      map.flyTo(positionMarker.getLatLng(), 15, { duration: 2 });
+    }
+  });
+
+  // Inicializar información de zoom
+  actualizarInfoZoom();
+
 </script>
 
 </body>
